@@ -301,7 +301,7 @@ class MazeEnv(gym.Env):
     else:
       inner_next_obs, inner_reward, done, info = self.LOCOMOTION_ENV.step(self, action)
     next_obs = self._get_obs()
-    return next_obs, inner_reward, done, info
+    return next_obs, inner_reward, done, False, info
 
   def _get_best_next_rowcol(self, current_rowcol, target_rowcol):
     """Runs BFS to find shortest path to target and returns best next rowcol. 

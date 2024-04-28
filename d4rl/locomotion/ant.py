@@ -20,7 +20,7 @@ import numpy as np
 import mujoco_py
 import os
 
-from gym import utils
+from gym import utils, spaces
 from gym.envs.mujoco import mujoco_env
 from d4rl.locomotion import mujoco_goal_env
 
@@ -36,6 +36,10 @@ GYM_ASSETS_DIR = os.path.join(
 class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
   """Basic ant locomotion environment."""
   FILE = os.path.join(GYM_ASSETS_DIR, 'ant.xml')
+  metadata = {
+    "render_modes": ["human", "rgb_array", "depth_array"],
+    "render_fps": 10,
+  }
 
   def __init__(self, file_path=None, expose_all_qpos=False,
                expose_body_coms=None, expose_body_comvels=None, non_zero_reset=False):
@@ -50,18 +54,10 @@ class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     self._non_zero_reset = non_zero_reset
 
-    mujoco_env.MujocoEnv.__init__(self, file_path, 5)
-    utils.EzPickle.__init__(self)
+    observation_space = spaces.Box(-np.inf, np.inf, shape=(29,), dtype="float64")
 
-  @property
-  def physics(self):
-    # Check mujoco version is greater than version 1.50 to call correct physics
-    # model containing PyMjData object for getting and setting position/velocity.
-    # Check https://github.com/openai/mujoco-py/issues/80 for updates to api.
-    if mujoco_py.get_version() >= '1.50':
-      return self.sim
-    else:
-      return self.model
+    mujoco_env.MujocoEnv.__init__(self, file_path, 5, observation_space, "rgb_array")
+    utils.EzPickle.__init__(self)
 
   def _step(self, a):
     return self.step(a)
@@ -73,7 +69,7 @@ class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     forward_reward = (xposafter - xposbefore) / self.dt
     ctrl_cost = .5 * np.square(a).sum()
     contact_cost = 0.5 * 1e-3 * np.sum(
-        np.square(np.clip(self.sim.data.cfrc_ext, -1, 1)))
+        np.square(np.clip(self.data.cfrc_ext, -1, 1)))
     survive_reward = 1.0
     reward = forward_reward - ctrl_cost - contact_cost + survive_reward
     state = self.state_vector()
@@ -81,7 +77,7 @@ class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         and state[2] >= 0.2 and state[2] <= 1.0
     done = not notdone
     ob = self._get_obs()
-    return ob, reward, done, dict(
+    return ob, reward, done, False, dict(
         reward_forward=forward_reward,
         reward_ctrl=-ctrl_cost,
         reward_contact=-contact_cost,
@@ -91,13 +87,13 @@ class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     # No cfrc observation.
     if self._expose_all_qpos:
       obs = np.concatenate([
-          self.physics.data.qpos.flat[:15],  # Ensures only ant obs.
-          self.physics.data.qvel.flat[:14],
+          self.data.qpos.flat[:15],  # Ensures only ant obs.
+          self.data.qvel.flat[:14],
       ])
     else:
       obs = np.concatenate([
-          self.physics.data.qpos.flat[2:15],
-          self.physics.data.qvel.flat[:14],
+          self.data.qpos.flat[2:15],
+          self.data.qvel.flat[:14],
       ])
 
     if self._expose_body_coms is not None:
@@ -120,7 +116,7 @@ class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
   def reset_model(self):
     qpos = self.init_qpos + self.np_random.uniform(
         size=self.model.nq, low=-.1, high=.1)
-    qvel = self.init_qvel + self.np_random.randn(self.model.nv) * .1
+    qvel = self.init_qvel + self.np_random.standard_normal(self.model.nv) * .1
 
     if self._non_zero_reset:
       """Now the reset is supposed to be to a non-zero location"""
@@ -137,13 +133,13 @@ class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     self.viewer.cam.distance = self.model.stat.extent * 0.5
 
   def get_xy(self):
-    return self.physics.data.qpos[:2]
+    return self.data.qpos[:2]
 
   def set_xy(self, xy):
-    qpos = np.copy(self.physics.data.qpos)
+    qpos = np.copy(self.data.qpos)
     qpos[0] = xy[0]
     qpos[1] = xy[1]
-    qvel = self.physics.data.qvel
+    qvel = self.data.qvel
     self.set_state(qpos, qvel)
   
 
@@ -183,7 +179,7 @@ class AntMazeEnv(maze_env.MazeEnv, GoalReachingAntEnv, offline_env.OfflineEnv):
     self.set_target()
     self.v2_resets = v2_resets
           
-  def reset(self):
+  def reset(self, **kwargs):
     if self.v2_resets:
       """
       The target goal for evaluation in antmazes is randomized.
@@ -199,7 +195,7 @@ class AntMazeEnv(maze_env.MazeEnv, GoalReachingAntEnv, offline_env.OfflineEnv):
       over 100-200 episodes will give a valid estimate of an algorithm's performance.
       """      
       self.set_target()
-    return super().reset()
+    return super().reset(**kwargs)
     
   def set_target(self, target_location=None):
     return self.set_target_goal(target_location)
