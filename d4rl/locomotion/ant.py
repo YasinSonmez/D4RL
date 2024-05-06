@@ -77,6 +77,10 @@ class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         and state[2] >= 0.2 and state[2] <= 1.0
     done = not notdone
     ob = self._get_obs()
+
+    if self.render_mode == "human":
+      self.render()
+
     return ob, reward, done, False, dict(
         reward_forward=forward_reward,
         reward_ctrl=-ctrl_cost,
