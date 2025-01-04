@@ -60,10 +60,9 @@ setup(
         ]
     },
     install_requires=[
-        "gym<0.24.0",
+        "gym>0.24.0",
         "numpy",
         "mujoco_py",
-        "pybullet",
         "h5py",
         "termcolor",  # adept_envs dependency
         "click",  # adept_envs dependency
