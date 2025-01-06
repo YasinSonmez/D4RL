@@ -91,6 +91,11 @@ class _PenEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv):
 
         return self.get_obs(), reward, done, dict(goal_achieved=goal_achieved)
 
+    def reset(self, **kwargs):
+        if "seed" in kwargs:
+            self.seed(kwargs["seed"])
+        return super().reset()
+
     def get_obs(self):
         qp = self.data.qpos.ravel()
         obj_vel = self.data.qvel[-6:].ravel()

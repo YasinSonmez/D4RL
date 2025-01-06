@@ -78,6 +78,11 @@ class _HammerEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv)
 
         return ob, reward, False, dict(goal_achieved=goal_achieved)
 
+    def reset(self, **kwargs):
+        if "seed" in kwargs:
+            self.seed(kwargs["seed"])
+        return super().reset()
+
     def get_obs(self):
         # qpos for hand
         # xpos for obj
