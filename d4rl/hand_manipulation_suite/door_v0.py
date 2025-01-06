@@ -1,4 +1,5 @@
 import numpy as np
+import gym
 from gym import utils
 from gym import spaces
 from mjrl.envs import mujoco_env
@@ -8,7 +9,7 @@ import os
 
 ADD_BONUS_REWARDS = True
 
-class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv):
+class _DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv):
     def __init__(self, **kwargs):
         offline_env.OfflineEnv.__init__(self, **kwargs)
         self.door_hinge_did = 0
@@ -67,6 +68,11 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv):
         goal_achieved = True if door_pos >= 1.35 else False
 
         return ob, reward, False, dict(goal_achieved=goal_achieved)
+
+    def reset(self, **kwargs):
+        if "seed" in kwargs:
+            self.seed(kwargs["seed"])
+        return super().reset()
 
     def get_obs(self):
         # qpos for hand
@@ -128,3 +134,16 @@ class DoorEnvV0(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv):
                 num_success += 1
         success_percentage = num_success*100.0/num_paths
         return success_percentage
+
+
+class DoorEnvV0(gym.Wrapper):
+    def __init__(self, **kwargs):
+        super().__init__(_DoorEnvV0(**kwargs))
+
+    def step(self, a):
+        obs, rew, ter, info = self.env.step(a)
+        return obs, rew, ter, False, info
+
+    def reset(self, **kwargs):
+        obs = self.env.reset(**kwargs)
+        return obs, {}
