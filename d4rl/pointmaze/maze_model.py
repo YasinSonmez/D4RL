@@ -1,5 +1,6 @@
 """ A pointmass maze env."""
 from gym.envs.mujoco import mujoco_env
+from gym.spaces import Box
 from gym import utils
 from d4rl import offline_env
 from d4rl.pointmaze.dynamic_mjc import MJCModel
@@ -170,9 +171,23 @@ class MazeEnv(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv):
 
         self._target = np.array([0.0,0.0])
 
-        model = point_maze(maze_spec)
+        observation_space = Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(4,),
+            dtype=np.float64,
+        )
+        self.model = model = point_maze(maze_spec)
+        self.metadata["render_modes"] = ["human", "rgb_array", "depth_array"]
+        self.metadata["render_fps"] = int(np.round(1.0 / 0.01))
         with model.asfile() as f:
-            mujoco_env.MujocoEnv.__init__(self, model_path=f.name, frame_skip=1)
+            mujoco_env.MujocoEnv.__init__(
+                self,
+                model_path=f.name,
+                frame_skip=1,
+                observation_space=observation_space,
+                render_mode=kwargs.get("render_mode", None),
+            )
         utils.EzPickle.__init__(self)
 
         # Set the default goal (overriden by a call to set_target)
@@ -199,8 +214,10 @@ class MazeEnv(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv):
             reward = np.exp(-np.linalg.norm(ob[0:2] - self._target))
         else:
             raise ValueError('Unknown reward type %s' % self.reward_type)
+        if self.render_mode == "human":
+            self.render()
         done = False
-        return ob, reward, done, {}
+        return ob, reward, done, False, {}
 
     def _get_obs(self):
         return np.concatenate([self.sim.data.qpos, self.sim.data.qvel]).ravel()
