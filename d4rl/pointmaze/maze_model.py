@@ -220,7 +220,7 @@ class MazeEnv(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv):
         return ob, reward, done, False, {}
 
     def _get_obs(self):
-        return np.concatenate([self.sim.data.qpos, self.sim.data.qvel]).ravel()
+        return np.concatenate([self.data.qpos, self.data.qvel]).ravel()
 
     def get_target(self):
         return self._target
@@ -233,27 +233,27 @@ class MazeEnv(mujoco_env.MujocoEnv, utils.EzPickle, offline_env.OfflineEnv):
         self._target = target_location
 
     def set_marker(self):
-        self.data.site_xpos[self.model.site_name2id('target_site')] = np.array([self._target[0]+1, self._target[1]+1, 0.0])
+        self.data.site_xpos[self.model.site('target_site').id] = np.array([self._target[0]+1, self._target[1]+1, 0.0])
 
     def clip_velocity(self):
-        qvel = np.clip(self.sim.data.qvel, -5.0, 5.0)
-        self.set_state(self.sim.data.qpos, qvel)
+        qvel = np.clip(self.data.qvel, -5.0, 5.0)
+        self.set_state(self.data.qpos, qvel)
 
     def reset_model(self):
         idx = self.np_random.choice(len(self.empty_and_goal_locations))
         reset_location = np.array(self.empty_and_goal_locations[idx]).astype(self.observation_space.dtype)
         qpos = reset_location + self.np_random.uniform(low=-.1, high=.1, size=self.model.nq)
-        qvel = self.init_qvel + self.np_random.randn(self.model.nv) * .1
+        qvel = self.init_qvel + self.np_random.normal(self.model.nv) * .1
         self.set_state(qpos, qvel)
         if self.reset_target:
             self.set_target()
         return self._get_obs()
 
     def reset_to_location(self, location):
-        self.sim.reset()
+        self._reset_simulation()
         reset_location = np.array(location).astype(self.observation_space.dtype)
         qpos = reset_location + self.np_random.uniform(low=-.1, high=.1, size=self.model.nq)
-        qvel = self.init_qvel + self.np_random.randn(self.model.nv) * .1
+        qvel = self.init_qvel + self.np_random.normal(self.model.nv) * .1
         self.set_state(qpos, qvel)
         return self._get_obs()
 
