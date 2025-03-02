@@ -1,3 +1,7 @@
+> [!NOTE]
+> This is a fork version of [D4RL](https://github.com/Farama-Foundation/D4RL). This version is adding changes to fix interface incompatibilities caused by the newer Gym version. This repository is maintained for the use in [d3rlpy](https://github.com/takuseno/d3rlpy).
+
+
 <p align="center">
     <img src="https://raw.githubusercontent.com/jjshoots/D4RL/master/d4rl-text.png" width="500px"/>
 </p>
